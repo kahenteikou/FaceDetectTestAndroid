@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -71,7 +72,7 @@ public class FD : WebCameraO
 		jsondata dtkun = new jsondata();
 		dtkun.faces = new List<int[]>();*/
 		string output_str = "";
-		if(processor.Faces.Count == 0)
+        if (processor.Faces.Count == 0)
         {
 			output = OpenCvSharp.Unity.MatToTexture(processor.Image, output);   // if output is valid texture it's buffer will be re-used, otherwise it will be re-created
 
@@ -79,26 +80,30 @@ public class FD : WebCameraO
 		}
 		foreach(DetectedFaceO akun in processor.Faces)
         {
-			output_str += $"{akun.Region.TopRight.X}, {akun.Region.TopRight.Y}, {akun.Region.BottomLeft.X}, {akun.Region.BottomLeft.Y }\n";
+			OpenCvSharp.Mat destmat = processor.Image.Clone(new OpenCvSharp.Rect(akun.Region.TopLeft.X, akun.Region.TopLeft.Y, akun.Region.Width, akun.Region.Height));
+			var tex2dkun = OpenCvSharp.Unity.MatToTexture(destmat);
+			var out_bin = tex2dkun.EncodeToPNG();
+			//output_str += $"{akun.Region.TopRight.X}, {akun.Region.TopRight.Y}, {akun.Region.BottomLeft.X}, {akun.Region.BottomLeft.Y }\n";
+
+			var postData = Encoding.UTF8.GetBytes(output_str);
+			var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
+			{
+				uploadHandler = new UploadHandlerRaw(out_bin),
+				downloadHandler = new DownloadHandlerBuffer()
+			};
+
+			request.SetRequestHeader("Content-Type", "application/json");
+
+			var operation = request.SendWebRequest();
+
+			operation.completed += _ =>
+			{
+				Debug.Log(operation.isDone);
+				Debug.Log(operation.webRequest.downloadHandler.text);
+				Debug.Log(operation.webRequest.isHttpError);
+				Debug.Log(operation.webRequest.isNetworkError);
+			};
 		}
-		var postData = Encoding.UTF8.GetBytes(output_str);
-		var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST)
-		{
-			uploadHandler = new UploadHandlerRaw(postData),
-			downloadHandler = new DownloadHandlerBuffer()
-		};
-
-		request.SetRequestHeader("Content-Type", "application/json");
-
-		var operation = request.SendWebRequest();
-
-		operation.completed += _ =>
-		{
-			Debug.Log(operation.isDone);
-			Debug.Log(operation.webRequest.downloadHandler.text);
-			Debug.Log(operation.webRequest.isHttpError);
-			Debug.Log(operation.webRequest.isNetworkError);
-		};
 		// processor.Image now holds data we'd like to visualize
 		output = OpenCvSharp.Unity.MatToTexture(processor.Image, output);   // if output is valid texture it's buffer will be re-used, otherwise it will be re-created
 
