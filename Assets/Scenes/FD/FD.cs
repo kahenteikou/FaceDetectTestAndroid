@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 public class FD : WebCameraO
 {
@@ -12,6 +14,7 @@ public class FD : WebCameraO
 	public TextAsset faces;
 	public TextAsset eyes;
 	public TextAsset shapes;
+	public Text textkun;
 
 	private FaceProcessorLive<WebCamTexture> processor;
 
@@ -95,13 +98,20 @@ public class FD : WebCameraO
 			request.SetRequestHeader("Content-Type", "application/json");
 
 			var operation = request.SendWebRequest();
-
 			operation.completed += _ =>
 			{
+				//processor.Image.PutText(operation.webRequest.downloadHandler.text, akun.Region.TopRight, OpenCvSharp.HersheyFonts.HersheyPlain, 4, new OpenCvSharp.Scalar(255, 0, 255), 5);
 				Debug.Log(operation.isDone);
 				Debug.Log(operation.webRequest.downloadHandler.text);
 				Debug.Log(operation.webRequest.isHttpError);
 				Debug.Log(operation.webRequest.isNetworkError);
+				textkun.text = operation.webRequest.downloadHandler.text;
+				/*// apply
+				var output22 = OpenCvSharp.Unity.MatToTexture(processor.Image);
+				Surface.GetComponent<RawImage>().texture = output22;
+
+				// Adjust image ration according to the texture sizes 
+				Surface.GetComponent<RectTransform>().sizeDelta = new Vector2(output22.width, output22.height);*/
 			};
 		}
 		// processor.Image now holds data we'd like to visualize

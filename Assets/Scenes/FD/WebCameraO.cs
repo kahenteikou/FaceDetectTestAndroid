@@ -62,7 +62,7 @@
 				if (-1 != cameraIndex)
 				{
 					webCamDevice = WebCamTexture.devices[cameraIndex];
-					webCamTexture = new WebCamTexture(webCamDevice.Value.name);
+					webCamTexture = new WebCamTexture(webCamDevice.Value.name,1920,1080,5);
 
 					// read device params and make conversion map
 					ReadTextureConversionParameters();
