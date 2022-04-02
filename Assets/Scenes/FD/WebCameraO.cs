@@ -1,6 +1,7 @@
 
 	using System;
-	using UnityEngine;
+using NRKernal;
+using UnityEngine;
 	using UnityEngine.UI;
 	using OpenCvSharp;
 
@@ -17,9 +18,10 @@
 		/// Target surface to render WebCam stream
 		/// </summary>
 		public GameObject Surface;
-
+	const bool isNR = true;
 		private Nullable<WebCamDevice> webCamDevice = null;
 		private WebCamTexture webCamTexture = null;
+	private NRRGBCamTexture webCamTexture32 = null;
 		private Texture2D renderedTexture = null;
 
 		/// <summary>
@@ -62,12 +64,21 @@
 				if (-1 != cameraIndex)
 				{
 					webCamDevice = WebCamTexture.devices[cameraIndex];
-					webCamTexture = new WebCamTexture(webCamDevice.Value.name,1920,1080,5);
+				webCamTexture = new WebCamTexture(webCamDevice.Value.name);
+				if (isNR)
+				{
+					webCamTexture32 = new NRRGBCamTexture();
+					ReadTextureConversionParameters();
+					webCamTexture32.Play();
 
+				}
+				else
+				{
 					// read device params and make conversion map
 					ReadTextureConversionParameters();
 
 					webCamTexture.Play();
+				}
 				}
 				else
 				{
@@ -83,21 +94,25 @@
 		private void ReadTextureConversionParameters()
 		{
 		OpenCvSharp.Unity.TextureConversionParams parameters = new OpenCvSharp.Unity.TextureConversionParams();
-
+			
 			// frontal camera - we must flip around Y axis to make it mirror-like
 			parameters.FlipHorizontally = forceFrontalCamera || webCamDevice.Value.isFrontFacing;
-			
+		if (isNR)
+		{
+		}
+		else
+		{
 			// TODO:
 			// actually, code below should work, however, on our devices tests every device except iPad
 			// returned "false", iPad said "true" but the texture wasn't actually flipped
 
 			// compensate vertical flip
 			//parameters.FlipVertically = webCamTexture.videoVerticallyMirrored;
-			
+
 			// deal with rotation
 			if (0 != webCamTexture.videoRotationAngle)
 				parameters.RotationAngle = webCamTexture.videoRotationAngle; // cw -> ccw
-
+		}
 			// apply
 			TextureParameters = parameters;
 
@@ -122,9 +137,17 @@
 					webCamTexture.Stop();
 				}
 				webCamTexture = null;
+		}
+		if (webCamTexture32 != null)
+		{
+			if (webCamTexture32.IsPlaying)
+			{
+				webCamTexture32.Stop();
 			}
+			webCamTexture = null;
+		}
 
-			if (webCamDevice != null) 
+		if (webCamDevice != null) 
 			{
 				webCamDevice = null;
 			}
@@ -134,8 +157,19 @@
 		/// Updates web camera texture
 		/// </summary>
 		private void Update ()
+	{
+		if (webCamTexture32 != null && webCamTexture32.DidUpdateThisFrame)
 		{
-			if (webCamTexture != null && webCamTexture.didUpdateThisFrame)
+			// this must be called continuously
+			ReadTextureConversionParameters();
+
+			// process texture with whatever method sub-class might have in mind
+			if (ProcessTexture(webCamTexture32, ref renderedTexture))
+			{
+				RenderFrame();
+			}
+		}
+		if (webCamTexture != null && webCamTexture.didUpdateThisFrame)
 			{
 				// this must be called continuously
 				ReadTextureConversionParameters();
@@ -156,11 +190,19 @@
 		/// <param name="output">Output Texture2D object</param>
 		/// <returns>True if anything has been processed, false if output didn't change</returns>
 		protected abstract bool ProcessTexture(WebCamTexture input, ref Texture2D output);
+	/// <summary>
+	/// Processes current texture
+	/// This function is intended to be overridden by sub-classes
+	/// </summary>
+	/// <param name="input">Input WebCamTexture object</param>
+	/// <param name="output">Output Texture2D object</param>
+	/// <returns>True if anything has been processed, false if output didn't change</returns>
+	protected abstract bool ProcessTexture(NRRGBCamTexture input, ref Texture2D output);
 
-		/// <summary>
-		/// Renders frame onto the surface
-		/// </summary>
-		private void RenderFrame()
+	/// <summary>
+	/// Renders frame onto the surface
+	/// </summary>
+	private void RenderFrame()
 		{
 			if (renderedTexture != null)
 			{

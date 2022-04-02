@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-public class FD : WebCameraO
+public class FD1NR : WebCameraO
 {
 
 	public TextAsset faces;
